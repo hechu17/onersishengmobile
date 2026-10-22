@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#0b0c19" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>私生滚开：夜路突围 · Mobile</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230b0c19'/%3E%3Ccircle cx='32' cy='32' r='20' fill='%2357d9ff'/%3E%3Cpath d='M22 22h8v20h-8zm12 0h8v20h-8z' fill='%230b0c19'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main id="app" aria-label="私生滚开：夜路突围 手机赛车游戏">
+      <canvas id="game" width="390" height="844" aria-label="三车道赛车游戏画面"></canvas>
+
+      <section id="hud" class="hud hidden" aria-label="游戏信息">
+        <div class="hud-topline">
+          <div class="metric-card distance-card">
+            <div class="metric-kicker"><span>逃离进度</span><em>MISSION</em></div>
+            <strong><b id="distance-value">0</b><small> m</small></strong>
+            <div class="metric-track"><i id="distance-fill"></i></div>
+            <div class="metric-foot"><small>0 m</small><small>SAFE 8300m</small></div>
+          </div>
+          <div class="metric-card durability-card">
+            <div class="metric-kicker"><span>车辆状态</span><em>ARMOR</em></div>
+            <strong id="durability-value">♥♥♥</strong>
+            <div class="health-track"><i id="health-fill"></i></div>
+            <div class="metric-foot"><small id="health-label">3 / 3</small><small>READY</small></div>
+          </div>
+          <div class="hud-actions">
+            <button id="pause-button" class="hud-action-button" type="button" aria-label="暂停游戏" title="暂停游戏">
+              <svg class="hud-action-icon hud-action-icon-pause" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+                <rect x="4.5" y="3.5" width="3" height="11" rx="1"></rect>
+                <rect x="10.5" y="3.5" width="3" height="11" rx="1"></rect>
+              </svg>
+              <svg class="hud-action-icon hud-action-icon-play" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+                <path d="M6 3.8v10.4L14.5 9 6 3.8Z"></path>
+              </svg>
+            </button>
+            <button id="mute-button" class="hud-action-button" type="button" aria-label="静音" title="静音" aria-pressed="false">
+              <svg class="hud-action-icon hud-action-icon-volume" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                <path d="M3 8h3l3.5-3v10L6 12H3z"></path>
+                <path d="M12 7.2c.9.7 1.4 1.7 1.4 2.8s-.5 2.1-1.4 2.8"></path>
+                <path d="M14.5 5.1c1.5 1.3 2.3 3 2.3 4.9s-.8 3.6-2.3 4.9"></path>
+              </svg>
+              <svg class="hud-action-icon hud-action-icon-muted" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                <path d="M3 8h3l3.5-3v10L6 12H3z"></path>
+                <path d="m13 7 4 6"></path>
+                <path d="m17 7-4 6"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="danger-card">
+          <div class="danger-label"><span><i></i>追车压力</span><b id="danger-value">18%</b></div>
+          <div class="danger-track"><i id="danger-fill"></i></div>
+          <div class="danger-foot"><span>TRACE LEVEL</span></div>
+        </div>
+
+        <div id="toast" class="toast" aria-live="polite"></div>
+        <div id="countdown" class="countdown" aria-live="assertive"></div>
+      </section>
+
+      <section id="controls" class="controls hidden" aria-label="触控操作">
+        <button id="left-button" class="control-button lane-button" type="button" aria-label="向左换道">←</button>
+        <div class="lane-hint"><span>SWIPE</span><i></i><span>CHANGE LANE</span></div>
+        <button id="right-button" class="control-button lane-button" type="button" aria-label="向右换道">→</button>
+      </section>
+
+      <section id="screen" class="screen" aria-live="polite">
+        <div class="panel home-panel intro-home-panel">
+          <div class="intro-topbar"><div class="brand-mark"><span>SR</span><i></i><em>02</em></div><span class="signal-badge"><i></i> NIGHT RUN</span></div>
+          <p class="eyebrow">任务简报 · 01 / 03</p>
+          <div class="briefing-progress" aria-label="任务简报进度"><i class="is-active"></i><i></i><i></i><span>BRIEFING 01</span></div>
+          <h1>私生滚开<br /><span>夜路突围</span></h1>
+          <div class="intro-page">
+            <div>
+              <span class="briefing-label">紧急情况 // 追车警报</span>
+              <h2>发现私生车追上来了</h2>
+            </div>
+            <p class="intro-page-copy">刚离开活动现场，几辆车已经咬住了我们。车辆会自动前进，躲开障碍、甩掉追车，跑完 8300m 抵达安全点。</p>
+            <div class="mission-goal"><span>任务失败条件</span><strong>撞车过多，或追车压力达到 100%</strong></div>
+            <p class="briefing-tip">准备好后进入下一页，了解车内支援道具。</p>
+          </div>
+          <div class="intro-actions intro-actions-single">
+            <button class="secondary-button" data-action="intro-next" type="button">下一页 <span>→</span></button>
+          </div>
+        </div>
+      </section>
+
+      <div id="flash" class="flash" aria-hidden="true"></div>
+    </main>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
