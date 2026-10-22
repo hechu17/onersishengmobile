@@ -69,23 +69,16 @@
       </section>
 
       <section id="screen" class="screen" aria-live="polite">
-        <div class="panel home-panel intro-home-panel">
-          <div class="intro-topbar"><div class="brand-mark"><span>SR</span><i></i><em>02</em></div><span class="signal-badge"><i></i> NIGHT RUN</span></div>
-          <p class="eyebrow">任务简报 · 01 / 03</p>
-          <div class="briefing-progress" aria-label="任务简报进度"><i class="is-active"></i><i></i><i></i><span>BRIEFING 01</span></div>
-          <h1>私生滚开<br /><span>夜路突围</span></h1>
-          <div class="intro-page">
-            <div>
-              <span class="briefing-label">紧急情况 // 追车警报</span>
-              <h2>发现私生车追上来了</h2>
-            </div>
-            <p class="intro-page-copy">刚离开活动现场，几辆车已经咬住了我们。车辆会自动前进，躲开障碍、甩掉追车，跑完 8300m 抵达安全点。</p>
-            <div class="mission-goal"><span>任务失败条件</span><strong>撞车过多，或追车压力达到 100%</strong></div>
-            <p class="briefing-tip">准备好后进入下一页，了解车内支援道具。</p>
+        <div class="panel loading-panel" role="status" aria-live="polite">
+          <div class="loading-mark"><span></span><i></i><span></span></div>
+          <p class="eyebrow">INITIALIZING NIGHT RUN</p>
+          <h1>正在准备逃离路线</h1>
+          <p class="loading-copy">正在加载车辆、障碍、道具和结算画面，稍等片刻即可开始。</p>
+          <div class="loading-progress">
+            <div class="loading-progress-head"><span id="loading-label">正在加载资源</span><b id="loading-percent">0%</b></div>
+            <div class="loading-track"><i id="loading-fill"></i></div>
           </div>
-          <div class="intro-actions intro-actions-single">
-            <button class="secondary-button" data-action="intro-next" type="button">下一页 <span>→</span></button>
-          </div>
+          <p class="loading-tip">请不要在资源加载完成前开始游戏。</p>
         </div>
       </section>
 

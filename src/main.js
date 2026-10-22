@@ -55,6 +55,15 @@ const ASSETS = {
   maimai: "./assets/images/item_maimai_relief.png",
 };
 
+const PRELOAD_ASSETS = [
+  "./assets/images/ending_bunny_closed_bar_v1.png",
+  "./assets/images/ending_crab_claw_v1.png",
+  "./assets/images/ending_taxi_didi_fans_v1.png",
+  "./assets/images/ending_pressure_fight_v1.png",
+  "./assets/images/ending_timeout_late_backstage_v1.png",
+  "./assets/images/ending_success_escaped_wrecked_fans_v1.png",
+];
+
 const PICKUP_STYLES = {
   yougan: { file: ASSETS.yougan, label: "油柑", color: "#ff8fb3" },
   bunnyGrenade: { file: ASSETS.bunnyGrenade, label: "小兔手雷", color: "#9f7bff" },
@@ -94,18 +103,22 @@ class MobileChaseGame {
     this.healthFill = document.querySelector("#health-fill");
     this.healthLabel = document.querySelector("#health-label");
     this.images = new Map();
-    this.state = "home";
+    this.state = "loading";
     this.introPage = 1;
+    this.assetsReady = false;
+    this.loadingRequest = null;
+    this.loadingProgress = { loaded: 0, total: 0 };
+    this.loadingFailed = [];
     this.muted = false;
     this.lastTime = performance.now();
     this.toastTimer = 0;
     this.pointerStart = null;
     this.audio = this.createAudio();
-    this.loadImages();
+    this.showLoading();
+    this.preloadAssets();
     this.bindEvents();
     this.resize();
     this.resetRun();
-    this.showHome();
     window.__mobileGameDebug = () => ({
       state: this.state,
       lane: this.lane,
@@ -128,19 +141,141 @@ class MobileChaseGame {
     return audio;
   }
 
-  loadImages() {
-    const paths = [ASSETS.player, ASSETS.chaser, ...Object.values(PICKUP_STYLES).map((item) => item.file), ...ASSETS.obstacles.map((item) => item.file)];
-    for (const path of paths) {
+  getPreloadPaths() {
+    return [...new Set([
+      ASSETS.player,
+      ASSETS.chaser,
+      ...Object.values(PICKUP_STYLES).map((item) => item.file),
+      ...ASSETS.obstacles.map((item) => item.file),
+      ...PRELOAD_ASSETS,
+    ])];
+  }
+
+  preloadImage(path) {
+    return new Promise((resolve) => {
       const image = new Image();
+      let settled = false;
+      const finish = (ok) => {
+        if (settled) return;
+        settled = true;
+        resolve({ path, ok });
+      };
+      image.addEventListener("load", () => finish(true), { once: true });
+      image.addEventListener("error", () => finish(false), { once: true });
       image.src = path;
       this.images.set(path, image);
-    }
+      if (image.complete) finish(image.naturalWidth > 0);
+    });
+  }
+
+  preloadAudio() {
+    if (!this.audio) return Promise.resolve({ path: "BGM", ok: true });
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (ok) => {
+        if (settled) return;
+        settled = true;
+        this.audio.removeEventListener("loadeddata", onReady);
+        this.audio.removeEventListener("canplaythrough", onReady);
+        this.audio.removeEventListener("error", onError);
+        resolve({ path: "BGM", ok });
+      };
+      const onReady = () => finish(true);
+      const onError = () => finish(false);
+      this.audio.addEventListener("loadeddata", onReady, { once: true });
+      this.audio.addEventListener("canplaythrough", onReady, { once: true });
+      this.audio.addEventListener("error", onError, { once: true });
+      try {
+        this.audio.load();
+      } catch {
+        finish(false);
+        return;
+      }
+      if (this.audio.readyState >= 2) finish(true);
+      window.setTimeout(() => finish(this.audio.readyState >= 2), 5000);
+    });
+  }
+
+  updateLoadingProgress(loaded, total) {
+    this.loadingProgress = { loaded, total };
+    const percent = total ? Math.round((loaded / total) * 100) : 100;
+    const fill = this.screen.querySelector("#loading-fill");
+    const label = this.screen.querySelector("#loading-label");
+    const value = this.screen.querySelector("#loading-percent");
+    if (fill) fill.style.width = `${percent}%`;
+    if (label) label.textContent = `正在加载资源 ${loaded} / ${total}`;
+    if (value) value.textContent = `${percent}%`;
+  }
+
+  showLoading() {
+    this.state = "loading";
+    this.hud.classList.add("hidden");
+    this.controls.classList.add("hidden");
+    this.screen.classList.remove("hidden");
+    this.screen.innerHTML = `
+      <div class="panel loading-panel" role="status" aria-live="polite">
+        <div class="loading-mark"><span></span><i></i><span></span></div>
+        <p class="eyebrow">INITIALIZING NIGHT RUN</p>
+        <h1>正在准备逃离路线</h1>
+        <p class="loading-copy">正在加载车辆、障碍、道具和结算画面，稍等片刻即可开始。</p>
+        <div class="loading-progress">
+          <div class="loading-progress-head"><span id="loading-label">正在加载资源</span><b id="loading-percent">0%</b></div>
+          <div class="loading-track"><i id="loading-fill"></i></div>
+        </div>
+        <p class="loading-tip">请不要在资源加载完成前开始游戏。</p>
+      </div>
+    `;
+    this.updateLoadingProgress(this.loadingProgress.loaded, this.loadingProgress.total);
+  }
+
+  showLoadingError() {
+    this.state = "loading-error";
+    this.screen.innerHTML = `
+      <div class="panel loading-panel loading-error-panel" role="alert" aria-live="assertive">
+        <div class="loading-mark loading-mark-error"><span>!</span></div>
+        <p class="eyebrow">LOAD FAILED</p>
+        <h1>资源加载失败</h1>
+        <p class="loading-copy">部分贴图或 BGM 没有加载完成，请检查服务器后重新尝试。</p>
+        <button class="primary-button" data-action="retry-loading" type="button">重新加载 <span>↻</span></button>
+      </div>
+    `;
+  }
+
+  async preloadAssets() {
+    if (this.loadingRequest) return this.loadingRequest;
+    this.assetsReady = false;
+    this.loadingFailed = [];
+    this.showLoading();
+    const paths = this.getPreloadPaths();
+    const total = paths.length + (this.audio ? 1 : 0);
+    let loaded = 0;
+    this.updateLoadingProgress(0, total);
+    const markComplete = (result) => {
+      loaded += 1;
+      this.updateLoadingProgress(loaded, total);
+      return result;
+    };
+    const tasks = paths.map((path) => this.preloadImage(path).then(markComplete));
+    if (this.audio) tasks.push(this.preloadAudio().then(markComplete));
+    this.loadingRequest = Promise.all(tasks).then((results) => {
+      this.loadingRequest = null;
+      this.loadingFailed = results.filter((result) => !result.ok).map((result) => result.path);
+      if (this.loadingFailed.length) {
+        this.showLoadingError();
+        return false;
+      }
+      this.assetsReady = true;
+      this.showHome();
+      return true;
+    });
+    return this.loadingRequest;
   }
 
   bindEvents() {
     this.screen.addEventListener("click", (event) => {
       const action = event.target.closest("[data-action]")?.dataset.action;
       if (action === "start" || action === "restart") this.startRun();
+      if (action === "retry-loading") this.preloadAssets();
       if (action === "intro-next") this.renderHomePage(this.introPage + 1);
       if (action === "intro-prev") this.renderHomePage(this.introPage - 1);
     });
@@ -174,6 +309,7 @@ class MobileChaseGame {
     window.addEventListener("keydown", (event) => {
       if (["ArrowLeft", "ArrowRight", "a", "d", "A", "D", "Enter", "p", "P", "m", "M"].includes(event.key)) event.preventDefault();
       if (event.repeat) return;
+      if (event.key === "Enter" && this.state === "loading-error") this.preloadAssets();
       if (event.key === "Enter" && this.state === "home") {
         if (this.introPage < 3) this.renderHomePage(this.introPage + 1);
         else this.startRun();
@@ -313,6 +449,7 @@ class MobileChaseGame {
   }
 
   startRun() {
+    if (!this.assetsReady) return;
     this.resetRun();
     this.state = "countdown";
     this.countdownTimer = 3.1;

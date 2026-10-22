@@ -89,6 +89,63 @@ button { font: inherit; }
     radial-gradient(circle at 21% 81%, #f5c46c 0 1px, transparent 1.8px);
 }
 
+.loading-panel {
+  max-width: 360px;
+  padding: 38px 26px 28px;
+  text-align: left;
+}
+
+.loading-panel h1 {
+  margin: 18px 0 12px;
+  color: #fbf6ee;
+  font-size: clamp(30px, 8vw, 42px);
+  line-height: 1.12;
+}
+
+.loading-mark {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 20px;
+}
+
+.loading-mark span {
+  display: block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 14px rgba(87, 217, 255, .8);
+  animation: loading-pulse 1.1s ease-in-out infinite;
+}
+
+.loading-mark span:nth-child(3) { animation-delay: .25s; background: var(--violet-bright); box-shadow: 0 0 14px rgba(197, 169, 255, .8); }
+.loading-mark i { width: 28px; height: 1px; background: linear-gradient(90deg, var(--cyan), var(--violet)); }
+.loading-mark-error span { display: grid; width: 30px; height: 30px; place-items: center; color: #160d1d; font-weight: 900; background: var(--danger); box-shadow: 0 0 18px rgba(255, 99, 125, .55); }
+.loading-mark-error { margin-bottom: 16px; }
+
+.loading-copy {
+  margin: 0;
+  color: #aaa8ba;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.loading-progress { margin-top: 26px; }
+.loading-progress-head { display: flex; justify-content: space-between; gap: 10px; color: #858396; font: 800 9px ui-monospace, monospace; letter-spacing: .05em; }
+.loading-progress-head b { color: var(--cyan); }
+.loading-track { height: 6px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: rgba(255, 255, 255, .1); }
+.loading-track i { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), var(--violet-bright)); box-shadow: 0 0 14px rgba(87, 217, 255, .6); transition: width .2s ease; }
+.loading-tip { margin: 18px 0 0; color: #686579; font-size: 10px; line-height: 1.5; }
+.loading-error-panel { text-align: center; }
+.loading-error-panel .loading-mark { justify-content: center; }
+.loading-error-panel .primary-button { margin-top: 24px; }
+
+@keyframes loading-pulse {
+  0%, 100% { opacity: .42; transform: scale(.82); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
 .panel {
   position: relative;
   width: 100%;
