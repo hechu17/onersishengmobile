@@ -1,7 +1,5 @@
 # 私生滚开：夜路突围 · Mobile
 
-这是从 `C:\Users\贺兰\Desktop\onersisheng` 赛车原型改出的手机端竖屏版本，采用与现有俯视素材一致的平行车道视角。
-
 ## 玩法
 
 - 三车道自动前进，点击左右按钮、左右滑动或使用 `← → / A D` 换道。
@@ -14,7 +12,7 @@
 在项目根目录启动任意静态服务器，例如：
 
 ```powershell
-cd C:\Users\贺兰\Desktop\onersishengmobile
+cd C:\Users\username\Desktop\onersishengmobile
 npx --yes serve .
 ```
 
