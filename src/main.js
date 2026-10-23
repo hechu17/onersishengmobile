@@ -514,8 +514,8 @@ class MobileChaseGame {
     return {
       image: "./assets/images/ending_bunny_grenade_sugar_fail_v1.png",
       alt: "紫色小兔子得意洋洋地扔出橙色饮品道具，气泡里却写着今日糖分摄取失败，奶牛猫和比格犬在旁边惊讶",
-      mainCaption: "小兔手雷出场！",
-      subCaption: "得意洋洋地扔出道具，今日糖分摄取却失败了。",
+      mainCaption: "小兔手雷立大功！",
+      subCaption: "可这是难得决定喝一次的饮料……",
     };
   }
 
@@ -523,8 +523,8 @@ class MobileChaseGame {
     return {
       image: "./assets/images/ending_yougan_sunglasses_escape_v1.png",
       alt: "奶牛猫戴着墨镜驾驶红色复古车，紫色小兔子坐在副驾驶，棕色比格犬坐在后座，车后是被撞坏的障碍物和车辆",
-      mainCaption: "墨镜一戴，油柑加速！",
-      subCaption: "奶牛猫负责开车，身后障碍物负责报废。",
+      mainCaption: "墨镜一戴，柑就完了！",
+      subCaption: "洋洋开车的时候最帅（可爱）！",
     };
   }
 
@@ -532,8 +532,8 @@ class MobileChaseGame {
     return {
       image: "./assets/images/ending_maimai_burger_car_v1.png",
       alt: "比格犬一手吃着汉堡，一手把另一个汉堡递给拒绝进食的小兔子，奶牛猫开车时对兔子有些不满",
-      mainCaption: "麦麦时间！",
-      subCaption: "比格递来的汉堡被拒绝了，奶牛猫对此非常不满。",
+      mainCaption: "麦麦时间到！",
+      subCaption: "你给他吃一口！",
     };
   }
 
@@ -1254,15 +1254,17 @@ class MobileChaseGame {
 
     // The generated transparent sprite provides the soft, rounded shield silhouette.
     if (shieldImage?.complete && shieldImage.naturalWidth > 0) {
-      const size = 226 + pulse * 7;
+      const shieldHeight = 210 + pulse * 6;
+      const sourceRatio = shieldImage.naturalWidth / shieldImage.naturalHeight;
+      const shieldWidth = shieldHeight * sourceRatio * 0.86;
       ctx.globalAlpha = 0.34 + pulse * 0.1;
       ctx.shadowBlur = 22;
       ctx.shadowColor = accent;
-      ctx.drawImage(shieldImage, x - size / 2, PLAYER_Y - size / 2 - 4, size, size);
+      ctx.drawImage(shieldImage, x - shieldWidth / 2, PLAYER_Y - shieldHeight / 2 - 4, shieldWidth, shieldHeight);
 
       // A lighter second pass keeps the asset legible over the road without making it opaque.
       ctx.globalAlpha = 0.12 + pulse * 0.05;
-      ctx.drawImage(shieldImage, x - size / 2, PLAYER_Y - size / 2 - 4, size, size);
+      ctx.drawImage(shieldImage, x - shieldWidth / 2, PLAYER_Y - shieldHeight / 2 - 4, shieldWidth, shieldHeight);
     }
 
     ctx.restore();
