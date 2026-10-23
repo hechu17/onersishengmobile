@@ -466,7 +466,7 @@ class MobileChaseGame {
     this.hud.classList.remove("hidden");
     this.controls.classList.remove("hidden");
     this.updatePauseButton();
-    this.showToast(`目标：跑完 ${TOTAL_DISTANCE}m，抵达安全点`, 2.4);
+    this.showToast(`目标：跑完 ${TOTAL_DISTANCE}m，甩开私生车`, 2.4);
     if (this.audio) {
       this.audio.currentTime = 0;
       this.audio.play().catch(() => {});
