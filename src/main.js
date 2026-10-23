@@ -8,6 +8,7 @@ const PLAYER_Y = 724;
 const VIEW_DISTANCE = 930;
 const TOTAL_DISTANCE = 8300;
 const INTRO_SAFE_DISTANCE = 1000;
+const INTRO_OBSTACLE_TIME = 10;
 const YOUGAN_TRIPLE_GAME_TIME = 45;
 const SAFE_WAVE_GAP = 270;
 const PLAYER_HITBOX_HALF_WIDTH = 32;
@@ -34,8 +35,8 @@ const PRESSURE_BALANCE = {
 };
 
 const SPEED_BALANCE = {
-  start: 238,
-  end: 360,
+  start: 270,
+  end: 400,
 };
 
 const ASSETS = {
@@ -51,8 +52,14 @@ const ASSETS = {
     { file: "./assets/images/obstacle_garage_column.png", label: "车库柱" },
   ],
   yougan: "./assets/images/item_yougan.png",
+  youganShield: "./assets/images/effect_yougan_shield.png",
   bunnyGrenade: "./assets/images/item_bunny_grenade.png",
   maimai: "./assets/images/item_maimai_relief.png",
+  avatars: {
+    yueyue: "./assets/images/avatar_lingchao.png",
+    muziyang: "./assets/images/avatar_muziyang.png",
+    lingchao: "./assets/images/avatar_yueyue.png",
+  },
 };
 
 const PRELOAD_ASSETS = [
@@ -65,7 +72,7 @@ const PRELOAD_ASSETS = [
 ];
 
 const PICKUP_STYLES = {
-  yougan: { file: ASSETS.yougan, label: "油柑", color: "#ff8fb3" },
+  yougan: { file: ASSETS.yougan, label: "油柑", color: "#f5c46c" },
   bunnyGrenade: { file: ASSETS.bunnyGrenade, label: "小兔手雷", color: "#9f7bff" },
   maimai: { file: ASSETS.maimai, label: "麦麦", color: "#57d9ff" },
 };
@@ -145,8 +152,10 @@ class MobileChaseGame {
     return [...new Set([
       ASSETS.player,
       ASSETS.chaser,
+      ASSETS.youganShield,
       ...Object.values(PICKUP_STYLES).map((item) => item.file),
       ...ASSETS.obstacles.map((item) => item.file),
+      ...Object.values(ASSETS.avatars),
       ...PRELOAD_ASSETS,
     ])];
   }
@@ -488,10 +497,44 @@ class MobileChaseGame {
   }
 
   getMostCollectedPickup() {
-    const [type, count] = Object.entries(this.pickupCounts)
-      .sort((first, second) => second[1] - first[1])[0] || [];
-    if (!count) return { label: "暂无道具", count: 0 };
-    return { label: PICKUP_STYLES[type]?.label || type, count };
+    const entries = Object.entries(this.pickupCounts).filter(([, count]) => count > 0);
+    if (!entries.length) return { type: null, label: "暂无道具", count: 0 };
+
+    const highestCount = Math.max(...entries.map(([, count]) => count));
+    const leaders = entries.filter(([, count]) => count === highestCount);
+    if (leaders.length !== 1) {
+      return { type: null, label: "数量相同", count: highestCount };
+    }
+
+    const [type, count] = leaders[0];
+    return { type, label: PICKUP_STYLES[type]?.label || type, count };
+  }
+
+  getBunnyGrenadeSuccessScene() {
+    return {
+      image: "./assets/images/ending_bunny_grenade_sugar_fail_v1.png",
+      alt: "紫色小兔子得意洋洋地扔出橙色饮品道具，气泡里却写着今日糖分摄取失败，奶牛猫和比格犬在旁边惊讶",
+      mainCaption: "小兔手雷出场！",
+      subCaption: "得意洋洋地扔出道具，今日糖分摄取却失败了。",
+    };
+  }
+
+  getYouganSuccessScene() {
+    return {
+      image: "./assets/images/ending_yougan_sunglasses_escape_v1.png",
+      alt: "奶牛猫戴着墨镜驾驶红色复古车，紫色小兔子坐在副驾驶，棕色比格犬坐在后座，车后是被撞坏的障碍物和车辆",
+      mainCaption: "墨镜一戴，油柑加速！",
+      subCaption: "奶牛猫负责开车，身后障碍物负责报废。",
+    };
+  }
+
+  getMaimaiSuccessScene() {
+    return {
+      image: "./assets/images/ending_maimai_burger_car_v1.png",
+      alt: "比格犬一手吃着汉堡，一手把另一个汉堡递给拒绝进食的小兔子，奶牛猫开车时对兔子有些不满",
+      mainCaption: "麦麦时间！",
+      subCaption: "比格递来的汉堡被拒绝了，奶牛猫对此非常不满。",
+    };
   }
 
   getFailureScene(reason) {
@@ -549,12 +592,18 @@ class MobileChaseGame {
     const distance = Math.min(TOTAL_DISTANCE, Math.round(this.distance));
     const mostCollectedPickup = this.getMostCollectedPickup();
     const resultScene = won
-      ? {
-        image: "./assets/images/ending_success_escaped_wrecked_fans_v1.png",
-        alt: "三只小动物在车里得意庆祝，远处的私生车辆已经报废并被甩开",
-        mainCaption: "成功甩开私生车",
-        subCaption: "距离产生美，对双方都一样",
-      }
+      ? mostCollectedPickup.type === "bunnyGrenade"
+        ? this.getBunnyGrenadeSuccessScene()
+        : mostCollectedPickup.type === "yougan"
+          ? this.getYouganSuccessScene()
+          : mostCollectedPickup.type === "maimai"
+            ? this.getMaimaiSuccessScene()
+            : {
+              image: "./assets/images/ending_success_escaped_wrecked_fans_v1.png",
+              alt: "三只小动物在车里得意庆祝，远处的私生车辆已经报废并被甩开",
+              mainCaption: "成功甩开私生车",
+              subCaption: "距离产生美，对双方都一样",
+            }
       : this.getFailureScene(reason);
     this.screen.classList.remove("hidden");
     this.screen.innerHTML = `
@@ -598,7 +647,7 @@ class MobileChaseGame {
   }
 
   spawnWave() {
-    if (this.distance < INTRO_SAFE_DISTANCE) return;
+    if (this.elapsed < INTRO_OBSTACLE_TIME) return;
 
     const z = VIEW_DISTANCE + 25;
     const progress = clamp(this.distance / TOTAL_DISTANCE, 0, 1);
@@ -784,7 +833,7 @@ class MobileChaseGame {
     this.spawnParticles(p.x, p.y, 20, style.color);
     if (pickup.type === "yougan") {
       this.invincibilityTimer = 8;
-      this.showToast("柑就完了：无敌 8 秒 · 加速", 1.5);
+      this.showToast("柑就完了：无敌 8 秒 · 加速", 1.5, ASSETS.avatars.muziyang);
     } else if (pickup.type === "bunnyGrenade") {
       const target = this.obstacles
         .filter((obstacle) => obstacle.lane === this.lane && !obstacle.cleared && !obstacle.hit && obstacle.z > 0)
@@ -793,13 +842,13 @@ class MobileChaseGame {
         target.cleared = true;
         const targetPoint = this.project(target);
         this.spawnParticles(targetPoint.x, targetPoint.y, 26, "#ff637d");
-        this.showToast(`小兔手雷：炸掉${target.label}`, 1.5);
+        this.showToast(`小兔手雷：炸掉${target.label}`, 1.5, ASSETS.avatars.yueyue);
       } else {
-        this.showToast("小兔手雷：当前车道没有目标", 1.35);
+        this.showToast("小兔手雷：当前车道没有目标", 1.35, ASSETS.avatars.yueyue);
       }
     } else {
       this.danger = clamp(this.danger - 26, 0, 100);
-      this.showToast("来个麦麦：追车压力 -26", 1.5);
+      this.showToast("来个麦麦：追车压力 -26", 1.5, ASSETS.avatars.lingchao);
     }
   }
 
@@ -833,8 +882,20 @@ class MobileChaseGame {
     this.muteButton.setAttribute("aria-pressed", String(this.muted));
   }
 
-  showToast(message, duration = 1.5) {
-    this.toast.textContent = message;
+  showToast(message, duration = 1.5, avatarPath = null) {
+    this.toast.replaceChildren();
+    if (avatarPath) {
+      const avatar = document.createElement("img");
+      avatar.className = "toast-avatar";
+      avatar.src = avatarPath;
+      avatar.alt = "";
+      avatar.setAttribute("aria-hidden", "true");
+      this.toast.appendChild(avatar);
+    }
+    const text = document.createElement("span");
+    text.className = "toast-message";
+    text.textContent = message;
+    this.toast.appendChild(text);
     this.toast.classList.add("show");
     this.toastTimer = duration;
   }
@@ -1143,21 +1204,68 @@ class MobileChaseGame {
     ctx.ellipse(x, PLAYER_Y + 42, 33, 10, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    if (this.invincibilityTimer > 0) {
-      const expiring = this.invincibilityTimer <= 2;
-      const pulse = expiring ? (Math.sin(this.elapsed * 18) > 0 ? 1 : 0.16) : 0.42 + Math.sin(this.elapsed * 7) * 0.1;
-      ctx.save();
-      ctx.globalAlpha = pulse;
-      ctx.strokeStyle = "#f5c46c";
-      ctx.lineWidth = 2;
-      ctx.shadowBlur = 17;
-      ctx.shadowColor = "#f5c46c";
-      ctx.beginPath();
-      ctx.ellipse(x, PLAYER_Y, 47, 91, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
+    if (this.invincibilityTimer > 0) this.drawYouganShield(ctx, x);
     this.drawRotatedImage(ctx, image, x, PLAYER_Y, height, 1);
+  }
+
+  drawYouganShield(ctx, x) {
+    const remaining = this.invincibilityTimer;
+    const expiring = remaining <= 2;
+    const pulse = expiring
+      ? (Math.sin(this.elapsed * 18) > 0 ? 1 : 0.16)
+      : 0.56 + Math.sin(this.elapsed * 7) * 0.12;
+    const accent = expiring ? "#ff9a3c" : "#f5c46c";
+    const secondary = expiring ? "#ffd47a" : "#fff1bd";
+    const shieldImage = this.images.get(ASSETS.youganShield);
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+
+    // The lower plume is the acceleration cue: it stretches backward with the road.
+    ctx.globalAlpha = 0.15 + pulse * 0.08;
+    ctx.shadowBlur = 24;
+    ctx.shadowColor = secondary;
+    const boostTrail = ctx.createLinearGradient(x, PLAYER_Y + 34, x, H);
+    boostTrail.addColorStop(0, `${secondary}80`);
+    boostTrail.addColorStop(0.34, `${accent}24`);
+    boostTrail.addColorStop(1, `${secondary}00`);
+    ctx.fillStyle = boostTrail;
+    ctx.beginPath();
+    ctx.moveTo(x - 23, PLAYER_Y + 30);
+    ctx.lineTo(x + 23, PLAYER_Y + 30);
+    ctx.lineTo(x + 40, H);
+    ctx.lineTo(x - 40, H);
+    ctx.closePath();
+    ctx.fill();
+
+    // A few straight speed lines make the boost readable without creating a ring.
+    ctx.lineCap = "round";
+    for (let index = 0; index < 5; index += 1) {
+      const offset = (index - 2) * 12;
+      const length = 38 + ((this.elapsed * 110 + index * 23) % 64);
+      ctx.globalAlpha = 0.22 + (index % 2) * 0.08;
+      ctx.strokeStyle = index % 2 ? secondary : accent;
+      ctx.lineWidth = index === 2 ? 2.4 : 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x + offset * 0.62, PLAYER_Y + 42);
+      ctx.lineTo(x + offset * 1.28, PLAYER_Y + 42 + length);
+      ctx.stroke();
+    }
+
+    // The generated transparent sprite provides the soft, rounded shield silhouette.
+    if (shieldImage?.complete && shieldImage.naturalWidth > 0) {
+      const size = 226 + pulse * 7;
+      ctx.globalAlpha = 0.34 + pulse * 0.1;
+      ctx.shadowBlur = 22;
+      ctx.shadowColor = accent;
+      ctx.drawImage(shieldImage, x - size / 2, PLAYER_Y - size / 2 - 4, size, size);
+
+      // A lighter second pass keeps the asset legible over the road without making it opaque.
+      ctx.globalAlpha = 0.12 + pulse * 0.05;
+      ctx.drawImage(shieldImage, x - size / 2, PLAYER_Y - size / 2 - 4, size, size);
+    }
+
+    ctx.restore();
   }
 
   drawRotatedImage(ctx, image, x, y, screenHeight, alpha) {
