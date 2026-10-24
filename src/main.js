@@ -67,8 +67,10 @@ const PRELOAD_ASSETS = [
   "./assets/images/ending_crab_claw_v1.png",
   "./assets/images/ending_taxi_didi_fans_v1.png",
   "./assets/images/ending_pressure_fight_v1.png",
-  "./assets/images/ending_timeout_late_backstage_v1.png",
   "./assets/images/ending_success_escaped_wrecked_fans_v1.png",
+  "./assets/images/ending_bunny_grenade_sugar_fail_v1.png",
+  "./assets/images/ending_yougan_sunglasses_escape_v1.png",
+  "./assets/images/ending_maimai_burger_car_v1.png",
 ];
 
 const PICKUP_STYLES = {
@@ -80,6 +82,66 @@ const PICKUP_TYPES = [
   { type: "bunnyGrenade", weight: 5 },
   { type: "maimai", weight: PRESSURE_BALANCE.maimaiWeight },
   { type: "yougan", weight: 1 },
+];
+
+const ENDING_STORAGE_KEY = "onersishengmobile.ending-collection.v1";
+const ENDING_CATALOG = [
+  {
+    id: "success_escape",
+    image: "./assets/images/ending_success_escaped_wrecked_fans_v1.png",
+    alt: "三只小动物在车里得意庆祝，远处的私生车辆已经报废并被甩开",
+    mainCaption: "成功甩开私生车",
+    subCaption: "距离产生美，对双方都一样",
+  },
+  {
+    id: "success_bunny_grenade",
+    image: "./assets/images/ending_bunny_grenade_sugar_fail_v1.png",
+    alt: "紫色小兔子得意洋洋地扔出橙色饮品道具，气泡里却写着今日糖分摄取失败，奶牛猫和比格犬在旁边惊讶",
+    mainCaption: "小兔手雷立大功！",
+    subCaption: "可这是难得决定喝一次的饮料……",
+  },
+  {
+    id: "success_yougan",
+    image: "./assets/images/ending_yougan_sunglasses_escape_v1.png",
+    alt: "奶牛猫戴着墨镜驾驶红色复古车，紫色小兔子坐在副驾驶，棕色比格犬坐在后座，车后是被撞坏的障碍物和车辆",
+    mainCaption: "墨镜一戴，柑就完了！",
+    subCaption: "洋洋开车的时候最帅（可爱）！",
+  },
+  {
+    id: "success_maimai",
+    image: "./assets/images/ending_maimai_burger_car_v1.png",
+    alt: "比格犬一手吃着汉堡，一手把另一个汉堡递给拒绝进食的小兔子，奶牛猫开车时对兔子有些不满",
+    mainCaption: "麦麦时间到！",
+    subCaption: "你给他吃一口！",
+  },
+  {
+    id: "failure_bunny_closed_bar",
+    image: "./assets/images/ending_bunny_closed_bar_v1.png",
+    alt: "深夜关门酒吧前失落的小兔子",
+    mainCaption: "酒吧关门了",
+    subCaption: "满心期待的喝酒夜被毁掉了，健康，但是可怜",
+  },
+  {
+    id: "failure_crab_claw",
+    image: "./assets/images/ending_crab_claw_v1.png",
+    alt: "青色蟹钳从天而降夹走玩家车辆，气泡中的奶牛猫十分害怕",
+    mainCaption: "车被螃蟹夹走了",
+    subCaption: "洋洋惊恐中，不知道“螃蟹”和“车被螃蟹夹走”哪个更可怕",
+  },
+  {
+    id: "failure_taxi_didi",
+    image: "./assets/images/ending_taxi_didi_fans_v1.png",
+    alt: "DIDI出租车载着得意的比格犬离开，后方是失落的私生粉",
+    mainCaption: "DIDI打着DIDI离开",
+    subCaption: "车都没了，驾照有什么用",
+  },
+  {
+    id: "failure_pressure_fight",
+    image: "./assets/images/ending_pressure_fight_v1.png",
+    alt: "比格犬下车准备冲向私生粉，奶牛猫拦住它，兔子打电话报警",
+    mainCaption: "过来我给你手机摔了",
+    subCaption: "别冲动，别给人打爽了，老岳快报警",
+  },
 ];
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -117,6 +179,8 @@ class MobileChaseGame {
     this.loadingProgress = { loaded: 0, total: 0 };
     this.loadingFailed = [];
     this.muted = false;
+    this.unlockedEndingIds = this.loadUnlockedEndingIds();
+    this.lastResult = null;
     this.lastTime = performance.now();
     this.toastTimer = 0;
     this.pointerStart = null;
@@ -280,6 +344,64 @@ class MobileChaseGame {
     return this.loadingRequest;
   }
 
+  loadUnlockedEndingIds() {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(ENDING_STORAGE_KEY) || "[]");
+      const validEndingIds = new Set(ENDING_CATALOG.map((ending) => ending.id));
+      return new Set((Array.isArray(saved) ? saved : []).filter((endingId) => validEndingIds.has(endingId)));
+    } catch {
+      return new Set();
+    }
+  }
+
+  unlockEnding(endingId) {
+    if (!endingId) return;
+    this.unlockedEndingIds.add(endingId);
+    try {
+      window.localStorage.setItem(ENDING_STORAGE_KEY, JSON.stringify([...this.unlockedEndingIds]));
+    } catch {
+      // The collection still works for the current page when storage is unavailable.
+    }
+  }
+
+  renderEndingCollection() {
+    this.state = "ending-collection";
+    const unlockedCount = ENDING_CATALOG.filter((ending) => this.unlockedEndingIds.has(ending.id)).length;
+    const endingCards = ENDING_CATALOG.map((ending, index) => {
+      const unlocked = this.unlockedEndingIds.has(ending.id);
+      return `
+        <article class="ending-card ${unlocked ? "is-unlocked" : "is-locked"}">
+          <div class="ending-card-visual">
+            <img src="${ending.image}" alt="${unlocked ? ending.alt : "未解锁结局"}" />
+            <span>${unlocked ? "已解锁" : "未解锁"}</span>
+          </div>
+          <div class="ending-card-copy">
+            <b>${unlocked ? ending.mainCaption : `结局 ${String(index + 1).padStart(2, "0")}`}</b>
+            <small>${unlocked ? ending.subCaption : "继续游戏以发现这个结局"}</small>
+          </div>
+        </article>
+      `;
+    }).join("");
+
+    this.screen.classList.remove("hidden");
+    this.screen.innerHTML = `
+      <div class="panel endings-panel">
+        <div class="endings-content">
+          <button class="secondary-button endings-back-button" data-action="close-endings" type="button"><span>←</span> 返回结算</button>
+          <div class="endings-topbar">
+            <div>
+              <p class="eyebrow">ENDING ARCHIVE</p>
+              <h2>结局收集</h2>
+            </div>
+            <strong>${unlockedCount} / ${ENDING_CATALOG.length}</strong>
+          </div>
+          <p class="endings-copy">已经触发的结局会保存在这里，未解锁的结局仍在等待你的下一次突围。</p>
+          <div class="ending-grid">${endingCards}</div>
+        </div>
+      </div>
+    `;
+  }
+
   bindEvents() {
     this.screen.addEventListener("click", (event) => {
       const action = event.target.closest("[data-action]")?.dataset.action;
@@ -287,6 +409,11 @@ class MobileChaseGame {
       if (action === "retry-loading") this.preloadAssets();
       if (action === "intro-next") this.renderHomePage(this.introPage + 1);
       if (action === "intro-prev") this.renderHomePage(this.introPage - 1);
+      if (action === "open-endings") this.renderEndingCollection();
+      if (action === "close-endings" && this.lastResult) {
+        this.state = "result";
+        this.renderResultScreen();
+      }
     });
     this.pauseButton.addEventListener("click", () => this.togglePause());
     this.muteButton.addEventListener("click", () => this.toggleMute());
@@ -498,20 +625,27 @@ class MobileChaseGame {
 
   getMostCollectedPickup() {
     const entries = Object.entries(this.pickupCounts).filter(([, count]) => count > 0);
-    if (!entries.length) return { type: null, label: "暂无道具", count: 0 };
+    if (!entries.length) return { type: null, label: "暂无道具", count: 0, isTie: false };
 
     const highestCount = Math.max(...entries.map(([, count]) => count));
     const leaders = entries.filter(([, count]) => count === highestCount);
     if (leaders.length !== 1) {
-      return { type: null, label: "数量相同", count: highestCount };
+      const leaderLabels = leaders.map(([type]) => PICKUP_STYLES[type]?.label || type);
+      return {
+        type: null,
+        label: leaderLabels.length === 3 ? "端水大师" : `${leaderLabels.join("、")}并列最多`,
+        count: highestCount,
+        isTie: true,
+      };
     }
 
     const [type, count] = leaders[0];
-    return { type, label: PICKUP_STYLES[type]?.label || type, count };
+    return { type, label: PICKUP_STYLES[type]?.label || type, count, isTie: false };
   }
 
   getBunnyGrenadeSuccessScene() {
     return {
+      id: "success_bunny_grenade",
       image: "./assets/images/ending_bunny_grenade_sugar_fail_v1.png",
       alt: "紫色小兔子得意洋洋地扔出橙色饮品道具，气泡里却写着今日糖分摄取失败，奶牛猫和比格犬在旁边惊讶",
       mainCaption: "小兔手雷立大功！",
@@ -521,6 +655,7 @@ class MobileChaseGame {
 
   getYouganSuccessScene() {
     return {
+      id: "success_yougan",
       image: "./assets/images/ending_yougan_sunglasses_escape_v1.png",
       alt: "奶牛猫戴着墨镜驾驶红色复古车，紫色小兔子坐在副驾驶，棕色比格犬坐在后座，车后是被撞坏的障碍物和车辆",
       mainCaption: "墨镜一戴，柑就完了！",
@@ -530,6 +665,7 @@ class MobileChaseGame {
 
   getMaimaiSuccessScene() {
     return {
+      id: "success_maimai",
       image: "./assets/images/ending_maimai_burger_car_v1.png",
       alt: "比格犬一手吃着汉堡，一手把另一个汉堡递给拒绝进食的小兔子，奶牛猫开车时对兔子有些不满",
       mainCaption: "麦麦时间到！",
@@ -540,18 +676,21 @@ class MobileChaseGame {
   getFailureScene(reason) {
     const genericResults = [
       {
+        id: "failure_bunny_closed_bar",
         image: "./assets/images/ending_bunny_closed_bar_v1.png",
         alt: "深夜关门酒吧前失落的小兔子",
         mainCaption: "酒吧关门了",
         subCaption: "满心期待的喝酒夜被毁掉了，健康，但是可怜",
       },
       {
+        id: "failure_crab_claw",
         image: "./assets/images/ending_crab_claw_v1.png",
         alt: "青色蟹钳从天而降夹走玩家车辆，气泡中的奶牛猫十分害怕",
         mainCaption: "车被螃蟹夹走了",
         subCaption: "洋洋惊恐中，不知道“螃蟹”和“车被螃蟹夹走”哪个更可怕",
       },
       {
+        id: "failure_taxi_didi",
         image: "./assets/images/ending_taxi_didi_fans_v1.png",
         alt: "DIDI出租车载着得意的比格犬离开，后方是失落的私生粉",
         mainCaption: "DIDI打着DIDI离开",
@@ -560,25 +699,16 @@ class MobileChaseGame {
     ];
     const pressureResults = [
       {
+        id: "failure_pressure_fight",
         image: "./assets/images/ending_pressure_fight_v1.png",
         alt: "比格犬下车准备冲向私生粉，奶牛猫拦住它，兔子打电话报警",
         mainCaption: "过来我给你手机摔了",
         subCaption: "别冲动，别给人打爽了，老岳快报警",
       },
     ];
-    const timeoutResults = [
-      {
-        image: "./assets/images/ending_timeout_late_backstage_v1.png",
-        alt: "后台工作人员训话，迟到的兔子、奶牛猫和比格犬低头道歉",
-        mainCaption: "活动迟到了",
-        subCaption: "结果如此，原因对于此刻并不重要",
-      },
-    ];
     const availableResults = reason === "追车压力爆表，信号已经暴露"
       ? [...genericResults, ...pressureResults]
-      : reason === "撤离时间耗尽"
-        ? [...genericResults, ...timeoutResults]
-        : genericResults;
+      : genericResults;
     return availableResults[Math.floor(Math.random() * availableResults.length)];
   }
 
@@ -599,12 +729,22 @@ class MobileChaseGame {
           : mostCollectedPickup.type === "maimai"
             ? this.getMaimaiSuccessScene()
             : {
+              id: "success_escape",
               image: "./assets/images/ending_success_escaped_wrecked_fans_v1.png",
               alt: "三只小动物在车里得意庆祝，远处的私生车辆已经报废并被甩开",
               mainCaption: "成功甩开私生车",
               subCaption: "距离产生美，对双方都一样",
             }
       : this.getFailureScene(reason);
+    this.unlockEnding(resultScene.id);
+    this.lastResult = { won, reason, distance, mostCollectedPickup, resultScene };
+    this.renderResultScreen();
+  }
+
+  renderResultScreen() {
+    if (!this.lastResult) return;
+    const { won, reason, distance, mostCollectedPickup, resultScene } = this.lastResult;
+    const unlockedCount = ENDING_CATALOG.filter((ending) => this.unlockedEndingIds.has(ending.id)).length;
     this.screen.classList.remove("hidden");
     this.screen.innerHTML = `
       <div class="panel result-panel">
@@ -623,7 +763,7 @@ class MobileChaseGame {
           <p class="result-reason"><strong>原因</strong>：${reason}</p>
           <div class="result-highlights">
             <div><span>逃离距离</span><b>${distance}m</b></div>
-            <div><span>本局拾取最多</span><b>${mostCollectedPickup.label}</b><small>${mostCollectedPickup.count ? `${mostCollectedPickup.count} 次` : "暂无拾取"}</small></div>
+            <div><span>${mostCollectedPickup.isTie ? "本局拾取并列最多" : "本局拾取最多"}</span><b>${mostCollectedPickup.label}</b><small>${mostCollectedPickup.count ? `${mostCollectedPickup.count} 次` : "暂无拾取"}</small></div>
           </div>
           <div class="result-details">
             <div><span>用时</span><b>${this.elapsed.toFixed(1)} 秒</b></div>
@@ -632,6 +772,7 @@ class MobileChaseGame {
             <div><span>压力峰值</span><b>${Math.round(this.danger)}%</b></div>
           </div>
           <button class="primary-button" data-action="restart" type="button">${won ? "再跑一圈" : "重新突围"} <span>↻</span></button>
+          <button class="secondary-button result-collection-button" data-action="open-endings" type="button">结局收集 <span>${unlockedCount} / ${ENDING_CATALOG.length}</span></button>
         </div>
       </div>
     `;
